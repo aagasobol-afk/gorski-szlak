@@ -1,21 +1,4 @@
-# 🏔️ Górski Szlak v0.2
+# Górski Szlak v0.3
+Wersja wizualna: bardziej filmowy, górski klimat, las, skały, mgła, szczyt, kozice i minimalistyczny HUD.
 
-Mini gra górska – wspinanie, przeszkody, grzyby i kozice.
-
-## Sterowanie
-- ← → ruch
-- ↑ skok
-- R – restart
-
-## v0.2
-- przewijany górski krajobraz
-- skały i drzewa
-- 🍄 podgrzybki (+ życie)
-- ☠️ muchomory (- życie)
-- 🐐 kozice
-- szczyt z flagą
-- ekran wyniku
-- sterowanie klawiaturą
-
-## Uruchomienie
-Otwórz `index.html` albo wrzuć plik do GitHub Pages.
+Sterowanie: ← → ruch, ↑ / spacja skok, R restart.

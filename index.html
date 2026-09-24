@@ -1,136 +1,118 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pl">
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Górski Szlak v0.2</title>
+<title>Górski Szlak</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#17251f;font-family:system-ui,sans-serif;color:#fff;display:flex;justify-content:center;align-items:center;min-height:100vh}
-#wrap{width:min(960px,100vw);position:relative}canvas{display:block;width:100%;height:auto;background:#9dc5d2;border-radius:12px;box-shadow:0 12px 40px #0008}
-.hint{text-align:center;font-size:14px;opacity:.8;margin-top:8px}
-button{font:inherit}
+html,body{margin:0;height:100%;background:#111814;font-family:Inter,system-ui,sans-serif;color:#fff}
+body{display:grid;place-items:center}
+main{width:min(1100px,100vw)}
+canvas{display:block;width:100%;height:auto;background:#718d8f;box-shadow:0 18px 60px #000b}
+@media(max-width:700px){canvas{border-radius:0}}
 </style>
 </head>
 <body>
-<div id="wrap">
-<canvas id="game" width="960" height="540"></canvas>
-<div class="hint">← → ruch &nbsp; ↑ skok &nbsp; • &nbsp; 🍄 +życie &nbsp; ☠️ −życie &nbsp; 🐐 uważać na kozicę!</div>
-</div>
+<main><canvas id="c" width="1100" height="620"></canvas></main>
 <script>
-const c=document.getElementById('game'),x=c.getContext('2d');
-const W=960,H=540,world=3600;
-let p,cam,rocks,mushrooms,goats,won,over,startTime;
-const keys={};
-addEventListener('keydown',e=>{keys[e.key]=true;if(['ArrowLeft','ArrowRight','ArrowUp',' '].includes(e.key))e.preventDefault();});
-addEventListener('keyup',e=>keys[e.key]=false);
+const c=document.getElementById("c"),g=c.getContext("2d"),W=c.width,H=c.height;
+const K={};addEventListener("keydown",e=>{K[e.key]=1;if(["ArrowLeft","ArrowRight","ArrowUp"," "].includes(e.key))e.preventDefault();if(e.key.toLowerCase()=="r")reset()});
+addEventListener("keyup",e=>K[e.key]=0);
+
+const world=5200, ground=540;
+let p,cam,rocks,mush,goats,state,start;
 
 function reset(){
- p={x:70,y:400,w:34,h:48,vy:0,on:false,lives:3,mush:0};
- cam=0; won=false;over=false;startTime=performance.now();
+ p={x:100,y:470,w:30,h:52,vy:0,on:false,lives:3,m:0,falls:0};
+ cam=0;state="play";start=performance.now();
  rocks=[
-  [430,445,70,38],[690,420,85,63],[1010,455,55,28],[1280,400,95,83],
-  [1610,448,70,35],[1880,410,105,73],[2220,450,60,30],[2520,390,100,93],
-  [2860,440,80,43],[3150,400,100,83]
+  [520,495,90,45],[820,455,110,85],[1160,500,65,40],[1430,440,120,100],
+  [1780,490,100,50],[2110,455,135,85],[2500,500,70,40],[2780,430,130,110],
+  [3180,480,95,60],[3470,420,145,120],[3880,495,80,45],[4170,450,130,90],
+  [4510,410,155,130]
  ];
- mushrooms=[[560,390,1],[820,360,1],[1160,420,-1],[1450,360,1],[1760,400,1],
- [2070,350,-1],[2380,410,1],[2700,350,1],[3030,400,-1],[3340,350,1]];
- goats=[[900,400],[2000,390],[2760,370]];
+ mush=[[690,430,1],[1010,455,1],[1330,440,-1],[1660,455,1],[2020,410,1],
+ [2350,455,-1],[2670,390,1],[3010,450,1],[3320,370,-1],[3710,450,1],
+ [4040,400,1],[4380,350,-1]];
+ goats=[[1280,455,0],[2250,455,0],[3630,425,0],[4300,405,0]];
 }
 reset();
 
-function rectHit(a,b){return a.x<b[0]+b[2]&&a.x+a.w>b[0]&&a.y<b[1]+b[3]&&a.y+a.h>b[1]}
-function jump(){if(p.on){p.vy=-13;p.on=false}}
+function hit(a,b){return a.x<b[0]+b[2]&&a.x+a.w>b[0]&&a.y<b[1]+b[3]&&a.y+a.h>b[1]}
 function update(){
- if(won||over)return;
- let oldx=p.x;
- if(keys.ArrowLeft)p.x-=4.5;
- if(keys.ArrowRight)p.x+=4.5;
- if(keys.ArrowUp){jump();keys.ArrowUp=false}
- p.x=Math.max(0,Math.min(world-p.w,p.x));
- p.vy+=.65;p.y+=p.vy;p.on=false;
- let ground=475;
- for(const r of rocks){
-   if(p.x+p.w>r[0]&&p.x<r[0]+r[2]&&p.y+p.h<=r[1]+12&&p.y+p.h+p.vy>=r[1]){p.y=r[1]-p.h;p.vy=0;p.on=true}
- }
+ if(state!="play")return;
+ if(K.ArrowLeft)p.x-=5.2;if(K.ArrowRight)p.x+=5.2;
+ if(K.ArrowUp||K[" "]){if(p.on)p.vy=-14;K.ArrowUp=0;K[" "]=0}
+ p.x=Math.max(0,Math.min(world-p.w,p.x));p.vy+=.7;p.y+=p.vy;p.on=false;
+
  if(p.y+p.h>=ground){p.y=ground-p.h;p.vy=0;p.on=true}
- for(const m of mushrooms){
-   if(m[2]!==0 && p.x<m[0]+30&&p.x+p.w>m[0]&&p.y<m[1]+30&&p.y+p.h>m[1]){
-     if(m[2]>0)p.lives=Math.min(5,p.lives+1),p.mush++;
-     else p.lives--;
-     m[2]=0;
-     if(p.lives<=0)over=true;
+ for(const r of rocks){
+   if(p.x+p.w>r[0]&&p.x<r[0]+r[2]&&p.y+p.h<=r[1]+16&&p.y+p.h+p.vy>=r[1]){
+    p.y=r[1]-p.h;p.vy=0;p.on=true;
    }
  }
- for(const g of goats){
-   if(g[0]>=0 && p.x<g[0]+42&&p.x+p.w>g[0]-10&&p.y<g[1]+45&&p.y+p.h>g[1]){
-     if(p.y+p.h-8<g[1]+18){p.vy=-11;g[0]+=9999}
-     else {p.lives--;g[0]+=9999;p.x-=45;if(p.lives<=0)over=true}
-   }
+ if(p.y>H+100){p.lives--;p.falls++;p.x=Math.max(40,p.x-180);p.y=350;p.vy=0;if(p.lives<=0)state="lose"}
+
+ for(const m of mush)if(m[2]&&p.x<m[0]+28&&p.x+p.w>m[0]&&p.y<m[1]+28&&p.y+p.h>m[1]){
+   if(m[2]>0){p.lives=Math.min(5,p.lives+1);p.m++}else p.lives--;
+   m[2]=0;if(p.lives<=0)state="lose";
  }
- if(p.x>world-170)won=true;
- cam+=(p.x-350-cam)*.08;
+ for(const q of goats)if(!q[2]&&p.x<q[0]+38&&p.x+p.w>q[0]-5&&p.y<q[1]+42&&p.y+p.h>q[1]){
+   if(p.y+p.h<q[1]+22){p.vy=-11;q[2]=1}else{p.lives--;q[2]=1;p.x-=80;if(p.lives<=0)state="lose"}
+ }
+ if(p.x>world-180)state="win";
+ cam+=(p.x-360-cam)*.1;
 }
-function mountain(px,base,h,color){
- x.fillStyle=color;x.beginPath();x.moveTo(px,base);x.lineTo(px+180,base-h);x.lineTo(px+360,base);x.closePath();x.fill();
+
+function mountain(x,b,h,far){
+ g.fillStyle=far?"#5e7475":"#435c5b";g.beginPath();g.moveTo(x,b);g.lineTo(x+260,b-h);g.lineTo(x+520,b);g.closePath();g.fill();
+ if(!far){g.fillStyle="#d9ddd4";g.beginPath();g.moveTo(x+260,b-h);g.lineTo(x+205,b-h+70);g.lineTo(x+260,b-h+38);g.lineTo(x+315,b-h+70);g.closePath();g.fill()}
+}
+function tree(x,y,s=1){
+ g.fillStyle="#302b25";g.fillRect(x-5*s,y,10*s,55*s);
+ g.fillStyle="#233d32";for(let i=0;i<3;i++){g.beginPath();g.moveTo(x,y-75*s+i*27*s);g.lineTo(x-42*s,y+12+i*22*s);g.lineTo(x+42*s,y+12+i*22*s);g.closePath();g.fill()}
+}
+function rock(r){
+ g.fillStyle="#3e4542";g.beginPath();g.roundRect(r[0],r[1],r[2],r[3],18);g.fill();
+ g.fillStyle="#69706a";g.beginPath();g.moveTo(r[0]+15,r[1]+12);g.lineTo(r[0]+r[2]*.35,r[1]+4);g.lineTo(r[0]+r[2]*.48,r[1]+18);g.lineTo(r[0]+r[2]*.2,r[1]+30);g.closePath();g.fill()
 }
 function draw(){
- x.clearRect(0,0,W,H);
- let grad=x.createLinearGradient(0,0,0,H);grad.addColorStop(0,'#91c8d7');grad.addColorStop(.62,'#d9e6d5');grad.addColorStop(1,'#78956e');x.fillStyle=grad;x.fillRect(0,0,W,H);
- // distant mountains
- x.save();x.translate(-cam*.18,0);
- for(let i=-2;i<14;i++)mountain(i*380,370,180+(i%3)*45,'#6f8d91');
- x.restore();
- // closer mountains
- x.save();x.translate(-cam*.38,0);
- for(let i=-2;i<12;i++)mountain(i*500,445,220+(i%2)*50,'#526f70');
- x.restore();
- // ground
- x.fillStyle='#496844';x.fillRect(0,475,W,65);
- x.save();x.translate(-cam,0);
- // path
- x.fillStyle='#b79b72';x.beginPath();x.moveTo(0,475);x.quadraticCurveTo(900,440,1800,475);x.quadraticCurveTo(2700,510,3600,450);x.lineTo(3600,540);x.lineTo(0,540);x.closePath();x.fill();
- // trees
- for(let i=80;i<world;i+=150){
-   const yy=455-(i%70);x.fillStyle='#5a4632';x.fillRect(i,yy,13,35);
-   x.fillStyle='#294d35';x.beginPath();x.arc(i+6,yy,32,0,7);x.fill();
- }
- // rocks
- for(const r of rocks){x.fillStyle='#5d625d';x.beginPath();x.roundRect(r[0],r[1],r[2],r[3],10);x.fill();x.fillStyle='#858b83';x.beginPath();x.arc(r[0]+r[2]*.3,r[1]+10,8,0,7);x.fill()}
- // mushrooms
- for(const m of mushrooms)if(m[2]!==0){
-   x.font='30px serif';x.fillText(m[2]>0?'🍄':'☠️',m[0],m[1]+28);
- }
- // goats
- for(const g of goats)if(g[0]<world){
-   x.font='42px serif';x.fillText('🐐',g[0],g[1]+40);
- }
+ let sky=g.createLinearGradient(0,0,0,H);sky.addColorStop(0,"#688b91");sky.addColorStop(.5,"#a7bbb4");sky.addColorStop(1,"#687762");g.fillStyle=sky;g.fillRect(0,0,W,H);
+ // subtle fog
+ g.fillStyle="#ffffff12";g.fillRect(0,230,W,160);
+ g.save();g.translate(-cam*.12,0);for(let i=-2;i<14;i++)mountain(i*480,430,250+(i%3)*45,true);g.restore();
+ g.save();g.translate(-cam*.32,0);for(let i=-2;i<14;i++)mountain(i*560,500,300+(i%2)*50,false);g.restore();
+
+ g.fillStyle="#435a3e";g.fillRect(0,ground,W,H-ground);
+ g.save();g.translate(-cam,0);
+ // trail
+ g.fillStyle="#9a8060";g.beginPath();g.moveTo(0,540);g.quadraticCurveTo(1200,500,2400,545);g.quadraticCurveTo(3600,575,5200,485);g.lineTo(5200,620);g.lineTo(0,620);g.closePath();g.fill();
+ for(let i=-50;i<world+200;i+=150)tree(i,470-(i%60),.75+(i%3)*.08);
+ for(const r of rocks)rock(r);
+ for(const m of mush)if(m[2]){g.font="27px serif";g.fillText(m[2]>0?"🍄":"☠",m[0],m[1]+28)}
+ for(const q of goats)if(q[0]<world){g.font="38px serif";g.fillText("🐐",q[0],q[1]+38)}
  // summit
- x.fillStyle='#fff';x.fillRect(world-145,270,5,205);x.fillStyle='#b83d38';
- x.beginPath();x.moveTo(world-140,275);x.lineTo(world-45,295);x.lineTo(world-140,315);x.closePath();x.fill();
- x.font='28px serif';x.fillText('🏔️',world-175,265);
- // player
- x.font='44px serif';x.fillText('🥾',p.x,p.y+42);x.font='25px serif';x.fillText('🧢',p.x+3,p.y+10);
- x.restore();
+ g.fillStyle="#d9ddd4";g.fillRect(world-125,260,6,280);g.fillStyle="#b3473e";
+ g.beginPath();g.moveTo(world-119,265);g.lineTo(world-10,292);g.lineTo(world-119,320);g.closePath();g.fill();
+ g.font="42px serif";g.fillText("⛰",world-185,260);
+ // player silhouette + backpack
+ g.fillStyle="#252c28";g.beginPath();g.arc(p.x+16,p.y+9,10,0,7);g.fill();g.fillRect(p.x+6,p.y+18,20,27);
+ g.fillStyle="#9c754f";g.fillRect(p.x+3,p.y+24,7,20);g.fillStyle="#202622";g.fillRect(p.x+6,p.y+44,8,7);g.fillRect(p.x+20,p.y+44,8,7);
+ g.restore();
+
  // HUD
- x.fillStyle='#173127dd';x.roundRect(18,16,380,68,14);x.fill();
- x.font='22px system-ui';x.fillStyle='#fff';
- x.fillText('❤️'.repeat(p.lives)+'🖤'.repeat(Math.max(0,5-p.lives)),32,45);
- x.font='16px system-ui';x.fillText('🍄 '+p.mush,32,70);
- x.fillText('Wysokość: '+Math.max(0,Math.round(p.x/10))+' m',125,70);
- if(won||over){
-   x.fillStyle='#102019e8';x.fillRect(0,0,W,H);
-   x.textAlign='center';
-   x.font='bold 52px system-ui';x.fillStyle='#fff';
-   x.fillText(won?'🏆 SZCZYT ZDOBYTY!':'💀 KONIEC WSPINACZKI',W/2,205);
-   x.font='24px system-ui';
-   let sec=Math.round((performance.now()-startTime)/1000);
-   x.fillText('Wysokość: '+Math.round(p.x/10)+' m   •   🍄 '+p.mush+'   •   Czas: '+sec+' s',W/2,255);
-   x.font='20px system-ui';x.fillText(won?'Stary może być dumny. 😎':'Następnym razem patrzymy pod nogi. 😂',W/2,300);
-   x.font='18px system-ui';x.fillText('Naciśnij R, żeby zagrać ponownie',W/2,350);
-   x.textAlign='left';
+ g.fillStyle="#111a16cc";g.roundRect(22,20,390,76,16);g.fill();
+ g.font="21px system-ui";g.fillStyle="#fff";g.fillText("❤️".repeat(p.lives)+"♡".repeat(5-p.lives),40,51);
+ g.font="15px system-ui";g.fillText("WYSOKOŚĆ  "+Math.round(p.x/10)+" m",40,78);
+ g.fillText("🍄  "+p.m+"     ⛰  "+Math.min(100,Math.round(p.x/(world-180)*100))+"%",205,78);
+
+ if(state!="play"){
+  g.fillStyle="#0b1210e8";g.fillRect(0,0,W,H);g.textAlign="center";
+  g.font="bold 52px system-ui";g.fillStyle="#fff";g.fillText(state=="win"?"SZCZYT ZDOBYTY":"WYPRAWA ZAKOŃCZONA",W/2,230);
+  g.font="21px system-ui";g.fillText("Wysokość: "+Math.round(p.x/10)+" m   •   grzyby: "+p.m+"   •   upadki: "+p.falls,W/2,275);
+  g.fillText("Naciśnij R, aby ruszyć ponownie",W/2,325);g.textAlign="left";
  }
 }
-addEventListener('keydown',e=>{if(e.key.toLowerCase()==='r')reset()});
 function loop(){update();draw();requestAnimationFrame(loop)}loop();
 </script>
 </body>
