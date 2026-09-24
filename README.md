@@ -1,5 +1,21 @@
-# 🏔️ Górski Szlak
+# 🏔️ Górski Szlak v0.2
 
-Mini gra 2D. v0.1: ruch, skok, przeszkody, życia, podgrzybki, muchomory i meta na szczycie.
+Mini gra górska – wspinanie, przeszkody, grzyby i kozice.
 
-Docelowo: kolejne poziomy, kozice, pogoda, energia, rekordy rodzinne i testy Starego 😂.
+## Sterowanie
+- ← → ruch
+- ↑ skok
+- R – restart
+
+## v0.2
+- przewijany górski krajobraz
+- skały i drzewa
+- 🍄 podgrzybki (+ życie)
+- ☠️ muchomory (- życie)
+- 🐐 kozice
+- szczyt z flagą
+- ekran wyniku
+- sterowanie klawiaturą
+
+## Uruchomienie
+Otwórz `index.html` albo wrzuć plik do GitHub Pages.
